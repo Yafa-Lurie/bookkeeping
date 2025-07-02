@@ -2,9 +2,14 @@
   "name": "bookkeeping",
   "version": "1.0.0",
   "devDependencies": {
-    "jest": "^27.0.0",
-    "ts-jest": "^27.0.0",
-    "@types/jest": "^27.0.0"
+    "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.4",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.0.3",
+    "supertest": "^7.1.1",
+    "ts-jest": "^29.4.0",
+    "typescript": "^5.8.3"
   },
   "jest": {
     "preset": "ts-jest",
@@ -29,13 +34,5 @@
     "body-parser": "^2.2.0",
     "express": "^5.1.0",
     "mongoose": "^8.16.0"
-  },
-  "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^24.0.4",
-    "jest": "^30.0.3",
-    "ts-jest": "^29.4.0",
-    "typescript": "^5.8.3"
   }
 }

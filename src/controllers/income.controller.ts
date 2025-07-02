@@ -25,7 +25,10 @@ class IncomeController {
   static async getIncomeById(req: Request, res: Response) {
     try {
       const income = await Income.findById(req.params.id);
-      if (!income) return res.status(404).send('Income not found');
+      if (!income) {
+         res.status(404).send('Income not found');
+         return;
+      }
       res.status(200).json(income);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
