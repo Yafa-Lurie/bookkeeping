@@ -5,7 +5,7 @@ import Expense from '../../../src/models/expense.model';
 
 describe('ExpenseController', () => {
   beforeAll(async () => {
-    await mongoose.connect('mongodb://localhost:27017/bookkeeping_test', { useNewUrlParser: true, useUnifiedTopology: true } as any);
+    await mongoose.connect('mongodb://localhost:27017/bookkeeping_test');
   });
 
   afterAll(async () => {
