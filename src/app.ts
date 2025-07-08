@@ -7,8 +7,14 @@ import expenseRoutes from './routes/expense.routes'; // Ensure this file exists 
 const app = express();
 app.use(express.json());
 
-const mongoUri = 'your_mongo_connection_string'; // Replace with your MongoDB connection string
-mongoose.connect(mongoUri);
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/bookkeeping'; // Default to local MongoDB
+mongoose.connect(mongoUri)
+  .then(() => {
+    console.log('MongoDB connected successfully.');
+  })
+  .catch((error) => {
+    console.error('MongoDB connection error:', error);
+  });
 
 app.use('/api/incomes', incomeRoutes);
 app.use('/api/expenses', expenseRoutes);
