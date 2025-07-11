@@ -9,7 +9,7 @@ describe('ExpenseController', () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.db.dropDatabase();
+    await (mongoose.connection.db as any).dropDatabase();
     await mongoose.disconnect();
   });
 
@@ -38,7 +38,8 @@ describe('ExpenseController', () => {
     const expense = await Expense.create({ amount: 10, category: 'Other', date: new Date(), description: 'Test' });
     const res = await request(app).get(`/api/expenses/${expense._id}`);
     expect(res.status).toBe(200);
-    expect(res.body._id).toBe(expense._id.toString());
+    expect(res.body._id).toBe((expense._id as any).toString());
+
   });
 
   it('should update an expense', async () => {
