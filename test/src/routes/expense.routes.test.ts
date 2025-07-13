@@ -10,7 +10,7 @@ describe('Expense Routes', () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.db.dropDatabase();
+    await (mongoose.connection.db as any).dropDatabase();
     await mongoose.disconnect();
   });
 
@@ -39,7 +39,7 @@ describe('Expense Routes', () => {
     const expense = await Expense.create({ amount: 20, category: 'Travel', date: new Date(), description: 'Bus' });
     const res = await request(app).get(`/api/expenses/${expense._id}`);
     expect(res.status).toBe(200);
-    expect(res.body._id).toBe(expense._id.toString());
+    expect(res.body._id).toBe((expense._id as any).toString());
   });
 
   it('PUT /api/expenses/:id - should update expense', async () => {

@@ -8,7 +8,7 @@ describe('Income Model', () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.db.dropDatabase();
+    await (mongoose.connection.db as any).dropDatabase();
     await mongoose.disconnect();
   });
 
