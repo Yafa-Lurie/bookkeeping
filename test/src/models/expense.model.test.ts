@@ -1,5 +1,5 @@
-import ExpenseController from './expense.controller';
-import Expense from '../models/expense.model';
+import ExpenseController from '../../../src/controllers/expense.controller';
+import Expense from '../../../src/models/expense.model';
 import { Request, Response } from 'express';
 
 jest.mock('../models/expense.model');

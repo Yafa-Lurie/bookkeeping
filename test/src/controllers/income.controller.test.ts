@@ -10,7 +10,7 @@ describe('IncomeController', () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.db.dropDatabase();
+    await (mongoose.connection.db as any).dropDatabase();
     await mongoose.disconnect();
   });
 
@@ -39,7 +39,8 @@ describe('IncomeController', () => {
     const income = await Income.create({ amount: 300, source: 'Freelance', date: new Date(), description: 'Project' });
     const res = await request(app).get(`/api/incomes/${income._id}`);
     expect(res.status).toBe(200);
-    expect(res.body._id).toBe(income._id.toString());
+    expect(res.body._id).toBe((income._id as any).toString());
+
   });
 
   it('should update an income', async () => {
