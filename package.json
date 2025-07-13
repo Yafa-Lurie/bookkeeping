@@ -19,7 +19,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/app.js",
+    "start": "node src/app.js",
     "dev": "ts-node src/app.ts",
     "dev:compiled": "tsc && node dist/app.js",
     "test": "jest"
