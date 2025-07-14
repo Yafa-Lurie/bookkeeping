@@ -1,22 +1,124 @@
+// import { Request, Response } from 'express';
+// import Expense from '../models/expense.model'; // Make sure to create this model
+
+// class ExpenseController {
+//   static async createExpense(req: Request, res: Response): Promise<void> {
+//     try {
+//       const expense = new Expense(req.body);
+//       await expense.save();
+//       res.status(201).json(expense);
+//     } catch (error:any) {
+//       res.status(400).json({ message: error.message });
+//     }
+//   }
+
+//   static async getAllExpenses(req: Request, res: Response): Promise<void> {
+//     try {
+//       const expenses = await Expense.find();
+//       res.status(200).json(expenses);
+//     } catch (error:any) {
+//       res.status(500).json({ message: error.message });
+//     }
+//   }
+
+//   static async getExpenseById(req: Request, res: Response): Promise<void> {
+//     try {
+//       const expense = await Expense.findById(req.params.id);
+//       if (!expense) {
+//         res.status(404).send('Expense not found');
+//         return;
+//       }
+//       res.status(200).json(expense);
+//     } catch (error:any) {
+//       res.status(500).json({ message: error.message });
+//     }
+//   }
+
+//   static async updateExpense(req: Request, res: Response): Promise<void> {
+//     try {
+//       const expense = await Expense.findByIdAndUpdate(req.params.id, req.body, { new: true });
+//       if (!expense) {
+//         res.status(404).send('Expense not found');
+//         return;
+//       }
+//       res.status(200).json(expense);
+//     } catch (error:any) {
+//       res.status(400).json({ message: error.message });
+//     }
+//   }
+
+//   static async deleteExpense(req: Request, res: Response): Promise<void> {
+//     try {
+//       const expense = await Expense.findByIdAndDelete(req.params.id);
+//       if (!expense) {
+//         res.status(404).send('Expense not found');
+//         return;
+//       }
+//       res.status(204).send();
+//     } catch (error:any) {
+//       res.status(500).json({ message: error.message });
+//     }
+//   }
+// }
+
+// export default ExpenseController;
 import { Request, Response } from 'express';
 import Expense from '../models/expense.model'; // Make sure to create this model
+import mongoose from 'mongoose';
+import Income from '../models/income.model';
 
 class ExpenseController {
+ 
+
+  // static async createExpense(req: Request, res: Response): Promise<void> {
+  //   try {
+  //     const expenseData = {
+  //       referenceNumber: req.body.referenceNumber,
+  //       date: new Date(req.body.date),
+  //       supplier: req.body.supplier,
+  //       category: req.body.category,
+  //       amount: req.body.amount,
+  //       vat: req.body.vat,
+  //       paymentMethod: req.body.paymentMethod,
+  //       document: req.file?.path // Assuming you are using a file upload middleware like multer
+  //     };
+
+  //     const expense = new Expense(expenseData);
+  //     await expense.save();
+  //     res.status(201).json(expense);
+  //   } catch (error: any) {
+  //     res.status(400).json({ message: error.message });
+  //   }
+  // }
   static async createExpense(req: Request, res: Response): Promise<void> {
-    try {
-      const expense = new Expense(req.body);
-      await expense.save();
-      res.status(201).json(expense);
-    } catch (error:any) {
-      res.status(400).json({ message: error.message });
+        try {
+            const { referenceNumber, date, supplier, category, amount, vat, paymentMethod } = req.body;
+            const documentPath = req.file ? req.file.path : undefined; // Get the uploaded file path
+
+            const expenseData = {
+                referenceNumber,
+                date: new Date(date),
+                supplier: supplier, 
+                category,
+                amount: parseFloat(amount),
+                vat: parseFloat(vat),
+                paymentMethod,
+                document: documentPath, // Save the path to the document
+            };
+
+            const expense = new Expense(expenseData);
+            await expense.save();
+            res.status(201).json(expense);
+        } catch (error: any) {
+            res.status(400).json({ message: error.message });
+        }
     }
-  }
 
   static async getAllExpenses(req: Request, res: Response): Promise<void> {
     try {
       const expenses = await Expense.find();
       res.status(200).json(expenses);
-    } catch (error:any) {
+    } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   }
@@ -29,20 +131,25 @@ class ExpenseController {
         return;
       }
       res.status(200).json(expense);
-    } catch (error:any) {
+    } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   }
 
   static async updateExpense(req: Request, res: Response): Promise<void> {
     try {
-      const expense = await Expense.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      const expenseData = {
+        ...req.body,
+        ...(req.file && { document: req.file.path }) // Update the document path if a new file is uploaded
+      };
+
+      const expense = await Expense.findByIdAndUpdate(req.params.id, expenseData, { new: true });
       if (!expense) {
         res.status(404).send('Expense not found');
         return;
       }
       res.status(200).json(expense);
-    } catch (error:any) {
+    } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   }
@@ -55,7 +162,7 @@ class ExpenseController {
         return;
       }
       res.status(204).send();
-    } catch (error:any) {
+    } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   }
