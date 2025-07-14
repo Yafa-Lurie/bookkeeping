@@ -18,6 +18,7 @@ const upload = multer({
     fileFilter: (req, file, cb) => {
         // Accept only PDF files
         const ext = path.extname(file.originalname);
+        console.log(ext);
         if (ext !== '.pdf') {
             return cb(new Error('Only PDF files are allowed.'));
         }
