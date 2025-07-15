@@ -76,8 +76,11 @@ class IncomeController {
   static async downloadDocument(req: Request, res: Response): Promise<void> {
     try {
       const income = await Income.findById(req.params.id);
-      console.log(income);
-      if (!income || !income.document) {
+      if (!income) {
+        res.status(404).send('income not found');
+        return;
+      }
+      if (!(income.document)) {
         res.status(404).send('Document not found');
         return;
       }
