@@ -18,6 +18,7 @@ import IncomeController from '../controllers/income.controller';
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' }); // Set your desired storage path for uploaded files
 
+router.get('/:id/download', IncomeController.downloadReceipt);
 // Define routes for income
 router.post('/', upload.single('document'), IncomeController.createIncome); // Handles file uploads
 router.get('/', IncomeController.getAllIncomes);

@@ -17,7 +17,7 @@ describe('Income Model', () => {
     const saved = await income.save();
     expect(saved._id).toBeDefined();
     expect(saved.amount).toBe(1000);
-    expect(saved.source).toBe('Job');
+    expect(saved.details).toBe('Job');
   });
 
   it('should require amount field', async () => {

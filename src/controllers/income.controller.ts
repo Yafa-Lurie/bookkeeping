@@ -63,6 +63,9 @@
 // }
 
 // export default IncomeController;
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
 
 import { Request, Response } from 'express';
 import Income from '../models/income.model';
@@ -70,39 +73,111 @@ import mongoose from 'mongoose';
 
 class IncomeController {
   static async createIncome(req: Request, res: Response): Promise<void> {
-     try {
-       const {
-         receiptNumber,
-         date,
-         client,
-         amount,
-         vat,
-         paymentMethod,
-         details,
-         printDate
-       } = req.body;
- 
-       const incomeData = {
-         receiptNumber,
-         date: new Date(date),
-         client: new mongoose.Types.ObjectId(client),
-         amount: parseFloat(amount),
-         vat: parseFloat(vat),
-         paymentMethod,
-         details,
-         printDate: printDate ? new Date(printDate) : undefined,
-         document: req.file?.path
-       };
- 
-       const income = new Income(incomeData);
-       await income.save();
-       res.status(201).json(income);
-     } catch (error: any) {
-       res.status(400).json({ message: error.message });
-     }
-   }
- 
- 
+    try {
+      const {
+        receiptNumber,
+        date,
+        client,
+        amount,
+        vat,
+        paymentMethod,
+        details,
+        printDate,
+        paymentDetails = {} // נקבל את כל פרטי התשלום כ-Object
+      } = req.body;
+
+      // נבנה את פרטי התשלום לפי סוג התשלום
+      let filteredPaymentDetails: any = {};
+
+      switch (paymentMethod) {
+        case 'Credit':
+          filteredPaymentDetails = {
+            last4Digits: paymentDetails.last4Digits,
+            installments: paymentDetails.installments
+          };
+          break;
+
+        case 'Check':
+        case 'Bank Transfer': // לשניהם אותו מבנה
+          filteredPaymentDetails = {
+            checkNumber: paymentDetails.checkNumber,
+            bankAccountNumber: paymentDetails.bankAccountNumber,
+            bankCode: paymentDetails.bankCode,
+            dueDate: paymentDetails.dueDate
+          };
+          break;
+
+        case 'Cash':
+          filteredPaymentDetails = {}; // לא צריך מידע נוסף
+          break;
+
+        default:
+          res.status(400).json({ message: 'Invalid payment method' });
+          return;
+
+      }
+
+      const income = new Income({
+        receiptNumber,
+        date,
+        client,
+        amount,
+        vat,
+        paymentMethod,
+        paymentDetails: filteredPaymentDetails,
+        details,
+        printDate,
+        document: req.file?.path // אם את משתמשת ב-multer
+      });
+
+      await income.save();
+
+      // צור את הקובץ PDF ושמור אותו בתיקייה
+      const receiptsDir = path.join(__dirname, '../../receipts');
+      if (!fs.existsSync(receiptsDir)) {
+        fs.mkdirSync(receiptsDir);
+      }
+
+      const pdfPath = path.join(receiptsDir, `receipt_${income._id}.pdf`);
+      const doc = new PDFDocument();
+      doc.pipe(fs.createWriteStream(pdfPath));
+
+      // תוכן הקבלה:
+      doc.fontSize(18).text('Receipt', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(12).text(`Receipt Number: ${receiptNumber}`);
+      doc.text(`Date: ${new Date(date).toLocaleDateString()}`);
+      doc.text(`Client ID: ${client}`);
+      doc.text(`Amount: ${amount}`);
+      doc.text(`VAT: ${vat}`);
+      doc.text(`Payment Method: ${paymentMethod}`);
+      doc.text(`Details: ${details || ''}`);
+      doc.end();
+
+      // עדכן את ההכנסה עם הנתיב של הקובץ
+      income.document = pdfPath;
+      await income.save();
+
+      res.status(201).json(income);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+static async downloadReceipt(req: Request, res: Response): Promise<void> {
+  try {
+    const income = await Income.findById(req.params.id);
+    if (!income || !income.document) {
+      res.status(404).send('Receipt not found');
+      return;
+    }
+
+    res.download(income.document); // שולח את הקובץ להורדה
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
 
   static async getAllIncomes(req: Request, res: Response): Promise<void> {
     try {

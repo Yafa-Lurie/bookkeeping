@@ -1,5 +1,3 @@
-// import { Request, Response } from 'express';
-// import Expense from '../models/expense.model'; // Make sure to create this model
 
 // class ExpenseController {
 //   static async createExpense(req: Request, res: Response): Promise<void> {
@@ -89,30 +87,73 @@ class ExpenseController {
   //   } catch (error: any) {
   //     res.status(400).json({ message: error.message });
   //   }
-  // }
+  // }import { Request, Response } from 'express';
+
   static async createExpense(req: Request, res: Response): Promise<void> {
-        try {
-            const { referenceNumber, date, supplier, category, amount, vat, paymentMethod } = req.body;
-            const documentPath = req.file ? req.file.path : undefined; // Get the uploaded file path
+    try {
+      const {
+        referenceNumber,
+        date,
+        supplier,
+        category,
+        amount,
+        vat,
+        paymentMethod,
+        last4Digits,
+        installments,
+        checkNumber,
+        bankAccountNumber,
+        bankCode,
+        dueDate
+      } = req.body;
 
-            const expenseData = {
-                referenceNumber,
-                date: new Date(date),
-                supplier: supplier, 
-                category,
-                amount: parseFloat(amount),
-                vat: parseFloat(vat),
-                paymentMethod,
-                document: documentPath, // Save the path to the document
-            };
+      // יצירת אובייקט פרטי תשלום בהתאם לאופן התשלום
+      let paymentDetails: any = {};
 
-            const expense = new Expense(expenseData);
-            await expense.save();
-            res.status(201).json(expense);
-        } catch (error: any) {
-            res.status(400).json({ message: error.message });
-        }
+      switch (paymentMethod) {
+        case 'Credit':
+          paymentDetails = {
+            last4Digits,
+            installments
+          };
+          break;
+        case 'Check':
+        case 'Bank Transfer':
+          paymentDetails = {
+            checkNumber,
+            bankAccountNumber,
+            bankCode,
+            dueDate
+          };
+          break;
+        case 'Cash':
+          paymentDetails = {}; // אין פרטים נוספים
+          break;
+        default:
+           res.status(400).json({ message: 'Invalid payment method' });
+           return;
+      }
+
+      const expense = new Expense({
+        referenceNumber,
+        date: new Date(date),
+        supplier,
+        category,
+        amount: parseFloat(amount),
+        vat: parseFloat(vat),
+        paymentMethod,
+        paymentDetails,
+        document: req.file?.path // אם עלה קובץ אסמכתא
+      });
+
+      await expense.save();
+      res.status(201).json(expense);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
+  }
+
+
 
   static async getAllExpenses(req: Request, res: Response): Promise<void> {
     try {
