@@ -10,7 +10,7 @@ import path from 'path';
 
 const app = express();
 app.use(express.json());
-app.use('/api/reports', reportRoutes);
+
 
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/bookkeeping';
 mongoose.connect(mongoUri)
@@ -21,6 +21,8 @@ mongoose.connect(mongoUri)
     console.error('MongoDB connection error:', error);
     process.exit(1);
   });
+app.use('/api/report', reportRoutes);
+
 app.use('/api/clients',clientRoutes)
 app.use('/api/incomes', incomeRoutes);
 app.use('/api/expenses', expenseRoutes);
