@@ -24,7 +24,6 @@ export class ReportController {
     }
   }
 
-  // פונקציות נוספות לפי הצורך...
     // הכנסות לפי לקוח
   static async incomeByClient(req: Request, res: Response) {
     try {

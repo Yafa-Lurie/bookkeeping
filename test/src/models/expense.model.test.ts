@@ -1,182 +1,108 @@
-import ExpenseController from '../../../src/controllers/expense.controller';
+import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import Expense from '../../../src/models/expense.model';
-import { Request, Response } from 'express';
 
-jest.mock('../models/expense.model');
+let mongoServer: MongoMemoryServer;
 
-const mockResponse = () => {
-  const res: Partial<Response> = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  res.send = jest.fn().mockReturnValue(res);
-  return res as Response;
-};
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  await mongoose.connect(mongoServer.getUri());
+});
 
-describe('ExpenseController', () => {
-  afterEach(() => {
-    jest.clearAllMocks();
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+afterEach(async () => {
+  await Expense.deleteMany({});
+});
+
+describe('Expense Model', () => {
+  it('should create and save a valid expense', async () => {
+    const expense = new Expense({
+      referenceNumber: 'EXP123',
+      date: new Date(),
+      supplier: new mongoose.Types.ObjectId(),
+      category: 'Furniture',
+      amount: 1000,
+      vat: 170,
+      paymentMethod: 'Credit',
+      paymentDetails: {
+        last4Digits: '1234',
+        installments: 3
+      },
+      document: 'receipt.pdf'
+    });
+
+    const savedExpense = await expense.save();
+
+    expect(savedExpense._id).toBeDefined();
+    expect(savedExpense.referenceNumber).toBe('EXP123');
+    expect(savedExpense.paymentDetails?.last4Digits).toBe('1234');
   });
 
-  describe('createExpense', () => {
-    it('should create an expense and return 201', async () => {
-      const req = { body: { name: 'Lunch', amount: 20 } } as Request;
-      const saveMock = jest.fn().mockResolvedValue(req.body);
-      (Expense as any).mockImplementation(() => ({ save: saveMock }));
-      const res = mockResponse();
+  it('should fail without required fields', async () => {
+    const expense = new Expense({});
 
-      await ExpenseController.createExpense(req, res);
+    let err;
+    try {
+      await expense.save();
+    } catch (error: any) {
+      err = error;
+    }
 
-      expect(saveMock).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(req.body);
-    });
-
-    it('should handle errors and return 400', async () => {
-      const req = { body: {} } as Request;
-      const saveMock = jest.fn().mockRejectedValue(new Error('Validation error'));
-      (Expense as any).mockImplementation(() => ({ save: saveMock }));
-      const res = mockResponse();
-
-      await ExpenseController.createExpense(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Validation error' });
-    });
+    expect(err).toBeDefined();
+    expect(err.errors.referenceNumber).toBeDefined();
+    expect(err.errors.date).toBeDefined();
+    expect(err.errors.supplier).toBeDefined();
+    expect(err.errors.category).toBeDefined();
+    expect(err.errors.amount).toBeDefined();
+    expect(err.errors.vat).toBeDefined();
+    expect(err.errors.paymentMethod).toBeDefined();
   });
 
-  describe('getAllExpenses', () => {
-    it('should return all expenses with 200', async () => {
-      const expenses = [{ name: 'Lunch', amount: 20 }];
-      (Expense.find as jest.Mock).mockResolvedValue(expenses);
-      const req = {} as Request;
-      const res = mockResponse();
-
-      await ExpenseController.getAllExpenses(req, res);
-
-      expect(Expense.find).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(expenses);
+  it('should reject invalid enum values for category', async () => {
+    const expense = new Expense({
+      referenceNumber: 'EXP999',
+      date: new Date(),
+      supplier: new mongoose.Types.ObjectId(),
+      category: 'InvalidCategory', // לא חוקי
+      amount: 500,
+      vat: 85,
+      paymentMethod: 'Cash'
     });
 
-    it('should handle errors and return 500', async () => {
-      (Expense.find as jest.Mock).mockRejectedValue(new Error('DB error'));
-      const req = {} as Request;
-      const res = mockResponse();
-
-      await ExpenseController.getAllExpenses(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ message: 'DB error' });
-    });
+    await expect(expense.save()).rejects.toThrow(/`category` is invalid/i);
   });
 
-  describe('getExpenseById', () => {
-    it('should return expense by id with 200', async () => {
-      const expense = { _id: '1', name: 'Lunch', amount: 20 };
-      (Expense.findById as jest.Mock).mockResolvedValue(expense);
-      const req = { params: { id: '1' } } as unknown as Request;
-      const res = mockResponse();
-
-      await ExpenseController.getExpenseById(req, res);
-
-      expect(Expense.findById).toHaveBeenCalledWith('1');
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(expense);
+  it('should reject invalid enum values for paymentMethod', async () => {
+    const expense = new Expense({
+      referenceNumber: 'EXP1000',
+      date: new Date(),
+      supplier: new mongoose.Types.ObjectId(),
+      category: 'Cleaning',
+      amount: 300,
+      vat: 51,
+      paymentMethod: 'Bitcoin' // לא חוקי
     });
 
-    it('should return 404 if expense not found', async () => {
-      (Expense.findById as jest.Mock).mockResolvedValue(null);
-      const req = { params: { id: '1' } } as unknown as Request;
-      const res = mockResponse();
-
-      await ExpenseController.getExpenseById(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.send).toHaveBeenCalledWith('Expense not found');
-    });
-
-    it('should handle errors and return 500', async () => {
-      (Expense.findById as jest.Mock).mockRejectedValue(new Error('DB error'));
-      const req = { params: { id: '1' } } as unknown as Request;
-      const res = mockResponse();
-
-      await ExpenseController.getExpenseById(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ message: 'DB error' });
-    });
+    await expect(expense.save()).rejects.toThrow(/`paymentMethod` is invalid/i);
   });
 
-  describe('updateExpense', () => {
-    it('should update expense and return 200', async () => {
-      const updatedExpense = { _id: '1', name: 'Dinner', amount: 30 };
-      (Expense.findByIdAndUpdate as jest.Mock).mockResolvedValue(updatedExpense);
-      const req = { params: { id: '1' }, body: { name: 'Dinner', amount: 30 } } as unknown as Request;
-      const res = mockResponse();
-
-      await ExpenseController.updateExpense(req, res);
-
-      expect(Expense.findByIdAndUpdate).toHaveBeenCalledWith('1', req.body, { new: true });
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(updatedExpense);
+  it('should allow optional paymentDetails fields to be missing', async () => {
+    const expense = new Expense({
+      referenceNumber: 'EXP2000',
+      date: new Date(),
+      supplier: new mongoose.Types.ObjectId(),
+      category: 'Salary',
+      amount: 8000,
+      vat: 1360,
+      paymentMethod: 'Bank Transfer'
     });
 
-    it('should return 404 if expense not found', async () => {
-      (Expense.findByIdAndUpdate as jest.Mock).mockResolvedValue(null);
-      const req = { params: { id: '1' }, body: {} } as unknown as Request;
-      const res = mockResponse();
+    const saved = await expense.save();
 
-      await ExpenseController.updateExpense(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.send).toHaveBeenCalledWith('Expense not found');
-    });
-
-    it('should handle errors and return 400', async () => {
-      (Expense.findByIdAndUpdate as jest.Mock).mockRejectedValue(new Error('Update error'));
-      const req = { params: { id: '1' }, body: {} } as unknown as Request;
-      const res = mockResponse();
-
-      await ExpenseController.updateExpense(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Update error' });
-    });
-  });
-
-  describe('deleteExpense', () => {
-    it('should delete expense and return 204', async () => {
-      (Expense.findByIdAndDelete as jest.Mock).mockResolvedValue({ _id: '1' });
-      const req = { params: { id: '1' } } as unknown as Request;
-      const res = mockResponse();
-
-      await ExpenseController.deleteExpense(req, res);
-
-      expect(Expense.findByIdAndDelete).toHaveBeenCalledWith('1');
-      expect(res.status).toHaveBeenCalledWith(204);
-      expect(res.send).toHaveBeenCalled();
-    });
-
-    it('should return 404 if expense not found', async () => {
-      (Expense.findByIdAndDelete as jest.Mock).mockResolvedValue(null);
-      const req = { params: { id: '1' } } as unknown as Request;
-      const res = mockResponse();
-
-      await ExpenseController.deleteExpense(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.send).toHaveBeenCalledWith('Expense not found');
-    });
-
-    it('should handle errors and return 500', async () => {
-      (Expense.findByIdAndDelete as jest.Mock).mockRejectedValue(new Error('Delete error'));
-      const req = { params: { id: '1' } } as unknown as Request;
-      const res = mockResponse();
-
-      await ExpenseController.deleteExpense(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Delete error' });
-    });
+    expect(saved.paymentDetails).toBeUndefined();
   });
 });

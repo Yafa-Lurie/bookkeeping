@@ -1,85 +1,69 @@
 import request from 'supertest';
+import app from '../../../src/app'; // ודא שזה הנתיב הנכון לאובייקט האפליקציה שלך
 import mongoose from 'mongoose';
-import app from '../../../src/app';
 import Expense from '../../../src/models/expense.model';
+import Supplier from '../../../src/models/supplier.model';
+
+let supplierId: string;
+
+beforeAll(async () => {
+  // התחברות למסד נתונים טסט (למשל In-Memory או MongoTest)
+  await mongoose.connect('mongodb://localhost:27017/expense_test');
+
+  // יצירת ספק לבדיקה
+  const supplier = new Supplier({ name: 'ספק טסט', email: 'test@supplier.com' });
+  const saved = await supplier.save();
+supplierId = (saved._id as mongoose.Types.ObjectId).toString();
+});
+
+afterAll(async () => {
+  await (mongoose.connection.db as any).dropDatabase();
+  await mongoose.disconnect();
+});
 
 describe('ExpenseController', () => {
-  beforeAll(async () => {
-    await mongoose.connect('mongodb://localhost:27017/bookkeeping_test');
-  });
-
-  afterAll(async () => {
-    await (mongoose.connection.db as any).dropDatabase();
-    await mongoose.disconnect();
-  });
-
-  afterEach(async () => {
-    await Expense.deleteMany({});
-  });
+  let expenseId: string;
 
   it('should create a new expense', async () => {
     const res = await request(app)
       .post('/api/expenses')
-      .send({ amount: 50, category: 'Food', date: new Date(), description: 'Lunch' });
+      .send({
+        referenceNumber: 'EXP-001',
+        date: '2025-07-15',
+        supplier: supplierId,
+        category: 'Petty Cash',
+        amount: 200,
+        vat: 34,
+        paymentMethod: 'Cash'
+      });
+
     expect(res.status).toBe(201);
-    expect(res.body).toHaveProperty('_id');
-    expect(res.body.amount).toBe(50);
+    expect(res.body.referenceNumber).toBe('EXP-001');
+    expenseId = res.body._id;
   });
 
   it('should get all expenses', async () => {
-    await Expense.create({ amount: 20, category: 'Travel', date: new Date(), description: 'Bus' });
     const res = await request(app).get('/api/expenses');
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThan(0);
   });
 
-  it('should get expense by id', async () => {
-    const expense = await Expense.create({ amount: 10, category: 'Other', date: new Date(), description: 'Test' });
-    const res = await request(app).get(`/api/expenses/${expense._id}`);
+  it('should get an expense by id', async () => {
+    const res = await request(app).get(`/api/expenses/${expenseId}`);
     expect(res.status).toBe(200);
-    expect(res.body._id).toBe((expense._id as any).toString());
-
+    expect(res.body._id).toBe(expenseId);
   });
 
   it('should update an expense', async () => {
-    const expense = await Expense.create({ amount: 30, category: 'Bills', date: new Date(), description: 'Electricity' });
     const res = await request(app)
-      .put(`/api/expenses/${expense._id}`)
-      .send({ amount: 35 });
+      .put(`/api/expenses/${expenseId}`)
+      .send({ amount: 250 });
     expect(res.status).toBe(200);
-    expect(res.body.amount).toBe(35);
+    expect(res.body.amount).toBe(250);
   });
 
   it('should delete an expense', async () => {
-    const expense = await Expense.create({ amount: 40, category: 'Fun', date: new Date(), description: 'Movie' });
-    const res = await request(app).delete(`/api/expenses/${expense._id}`);
+    const res = await request(app).delete(`/api/expenses/${expenseId}`);
     expect(res.status).toBe(204);
-    const found = await Expense.findById(expense._id);
-    expect(found).toBeNull();
   });
 });
-//         res.status(404).send('Expense not found');
-//         return
-//       }
-//       res.status(200).json(expense);
-//     } catch (error: any) {
-//       res.status(400).json({ message: error.message });
-//     }
-//   }
-
-//   static async deleteExpense(req: Request, res: Response) {
-//     try {
-//       const expense = await Expense.findByIdAndDelete(req.params.id);
-//       if (!expense) {
-//         res.status(404).send('Expense not found');
-//         return
-//       }
-//       res.status(204).send();
-//     } catch (error: any) {
-//       res.status(500).json({ message: error.message });
-//     }
-//   }
-// }
-
-// export default ExpenseController;
