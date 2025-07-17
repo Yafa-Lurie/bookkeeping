@@ -9,9 +9,11 @@ export interface ISupplier extends Document {
 
 const supplierSchema = new Schema<ISupplier>({
   name: { type: String, required: true },
-  email: { type: String },
+  email: { type: String, unique: true },
   phone: { type: String },
   address: { type: String }
 });
+
+
 
 export default mongoose.model<ISupplier>('Supplier', supplierSchema);

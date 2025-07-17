@@ -3,14 +3,29 @@ import { Request, Response } from 'express';
 import Supplier from '../models/supplier.model';
 
 class SupplierController {
-  static async createSupplier(req: Request, res: Response): Promise<void> {
-    try {
-      const supplier = await Supplier.create(req.body);
-      res.status(201).json(supplier);
-    } catch (error: any) {
+static async createSupplier(req: Request, res: Response): Promise<void> {
+  try {
+    const { name, email, phone, address } = req.body;
+
+    // בדיקה אם קיים ספק עם אותו אימייל
+    const existing = await Supplier.findOne({ email });
+    if (existing) {
+      res.status(400).json({ message: 'Supplier already exists with this email' });
+      return;
+    }
+
+    const supplier = new Supplier({ name, email, phone, address });
+    await supplier.save();
+
+    res.status(201).json(supplier);
+  } catch (error: any) {
+    if (error.code === 11000) {
+      res.status(400).json({ message: 'Duplicate email – supplier already exists' });
+    } else {
       res.status(400).json({ message: error.message });
     }
   }
+}
 
   static async getAllSuppliers(req: Request, res: Response): Promise<void> {
     const suppliers = await Supplier.find();

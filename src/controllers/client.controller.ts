@@ -3,23 +3,30 @@ import Client from '../models/client.model'; // Adjust the import path as necess
 
 class ClientController {
     // Create a new client
-    static async createClient(req: Request, res: Response): Promise<void> {
-        try {
-            const { name, email, phone, address } = req.body;
+static async createClient(req: Request, res: Response): Promise<void> {
+    try {
+        const { name, email, phone, address } = req.body;
 
-            const newClient = new Client({
-                name,
-                email,
-                phone,
-                address,
-            });
-
-            await newClient.save();
-            res.status(201).json(newClient);
-        } catch (error: any) {
-            res.status(400).json({ message: error.message });
+        // בדיקה אם כבר קיים לקוח עם אותו אימייל
+        const existing = await Client.findOne({ email });
+        if (existing) {
+            res.status(400).json({ message: 'Client already exists with this email' });
+            return;
         }
+
+        const newClient = new Client({
+            name,
+            email,
+            phone,
+            address,
+        });
+
+        await newClient.save();
+        res.status(201).json(newClient);
+    } catch (error: any) {
+        res.status(400).json({ message: error.message });
     }
+}
 
     // Get all clients
     static async getClients(req: Request, res: Response): Promise<void> {
